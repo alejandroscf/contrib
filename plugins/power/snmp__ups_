@@ -135,7 +135,22 @@ my $graphs = {
                               'value' => '.1.3.6.1.2.1.33.1.4.4.1.5' },
     'inputlinebads' => {      'title' => 'Number of times input power went bad',
                               'unit'  => 'n',
-                              'value' => '.1.3.6.1.2.1.33.1.3.1' }
+                              'value' => '.1.3.6.1.2.1.33.1.3.1' },
+    'batterystatus' => {      'title' => 'Battery Status',
+                              'unit'  => 'Status',
+                              'label' => 'Status',
+			      'info' => 'The indication of the capacity remaining in the UPS system\'s batteries.   A value of batteryNormal (2) indicates that the remaining run-time is greater than upsConfigLowBattTime.  A value of batteryLow (3) indicates that the remaining battery run-time is less than or equal to upsConfigLowBattTime.  A value of batteryDepleted (4) indicates that the UPS will be unable to sustain the present load when and if the utility power is lost (including the possibility that the utility power is currently absent and the UPS is unable to sustain the output).',
+                              'value' => '.1.3.6.1.2.1.33.1.2.1' },
+    'outputsource' => {       'title' => 'Output Source',
+                              'unit'  => 'Source',
+                              'label' => 'Output',
+			      'info'  => 'The present source of output power.  The enumeration none(2) indicates that there is no source of output power (and therefore no output power), for example, the system has opened the output breaker. other(1), none(2), normal(3), bypass(4), battery(5), booster(6), reducer(7)',
+                              'value' => '.1.3.6.1.2.1.33.1.4.1' },
+    'alarms' => {             'title' => 'Active Alarms',
+                              'unit'  => 'n',
+                              'label' => 'Alarms',
+                              'value' => '.1.3.6.1.2.1.33.1.6.1' },
+ 
 };
 
 
@@ -186,12 +201,15 @@ if ($ARGV[0] and $ARGV[0] eq "config") {
     for (my $i=0; $i < $count_data; $i++) {
         my $ip1 = $i + 1;
         if (defined($graphs->{$mode}->{'label'})) {
-            printf("%s%u.label %s\n", $mode, $ip1, sprintf($graphs->{$mode}->{'label'}, $ip1));
+            printf("%s%u.label %s\n", $mode, $ip1, sprintf($graphs->{$mode}->{'label'} ));
         } else {
             printf("%s%u.label Line %u\n", $mode, $ip1, $ip1);
         }
         printf("%s%u.type GAUGE\n", $mode, $ip1);
-        #printf "line%u.info %s\n",$i+1,$graphs->{$mode}->{'unit'};
+        if (defined($graphs->{$mode}->{'info'})) {
+            #printf "%s%u.info %s\n", $mode, $ip1, $graphs->{$mode}->{'info'};
+            printf "graph_info %s\n", $graphs->{$mode}->{'info'};
+        }
         if (defined($ENV{"${mode}${ip1}.warning"})) { printf("%s%s.warning %s\n", $mode, $ip1, $ENV{"${mode}${ip1}.warning"}); }
         if (defined($ENV{"${mode}${ip1}.critical"})) { printf("%s%s.critical %s\n", $mode, $ip1, $ENV{"${mode}${ip1}.critical"}); }
     }
@@ -200,8 +218,10 @@ if ($ARGV[0] and $ARGV[0] eq "config") {
 
 for (my $i = 0; $i < $count_data; $i++) {
     my $l_current = $i+1;
-    if ($count_data == 1) {
-        $l_current = 0;
+    if (! defined $graphs->{$mode}->{'list'}) {
+        if ($count_data == 1) {
+            $l_current = 0;
+        }
     }
     if (defined ($response = $session->get_request($graphs->{$mode}->{'value'} . sprintf(".%u",$l_current)))) {
         my $v = $response->{$graphs->{$mode}->{'value'} . sprintf(".%u",$l_current)};
